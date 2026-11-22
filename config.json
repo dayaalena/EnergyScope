@@ -1,0 +1,21 @@
+{
+  "start_date": "2024-01-01",
+  "end_date": null,
+  "latitude": 51.5074,
+  "longitude": -0.1278,
+  "weather_location": "Лондон",
+  "weather_delay_days": 7,
+  "weather_lag_hours": 336,
+  "horizon_hours": 24,
+  "train_days": 365,
+  "validation_folds": 6,
+  "calibration_folds": 8,
+  "test_folds": 8,
+  "fold_step_days": 5,
+  "interval_level": 0.9,
+  "request_timeout_seconds": 45,
+  "request_attempts": 3,
+  "auto_update_minutes": 60,
+  "port": 8765,
+  "seed": 42
+}

@@ -1,0 +1,952 @@
+<!doctype html>
+<html lang="ru">
+  <meta charset="utf-8" /><meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+  />
+  <title>EnergyScope — энергопотребление и прогноз</title>
+  <style>
+    :root {
+      --ink: #183142;
+      --blue: #276b8d;
+      --orange: #c56a2b;
+      --line: #dce4e9;
+      --muted: #60727e;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      background: #f5f7f8;
+      color: var(--ink);
+      font:
+        15px/1.5 system-ui,
+        Arial,
+        sans-serif;
+    }
+    header {
+      background: white;
+      border-bottom: 1px solid var(--line);
+      padding: 22px 5%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+    h1 {
+      font-size: 28px;
+      line-height: 1.2;
+      margin: 0 0 5px;
+    }
+    h2 {
+      font-size: 21px;
+      margin: 0 0 12px;
+    }
+    h3 {
+      font-size: 17px;
+      margin: 0 0 12px;
+    }
+    p {
+      margin: 8px 0 14px;
+    }
+    .muted,
+    small {
+      color: var(--muted);
+    }
+    main {
+      max-width: 1320px;
+      margin: auto;
+      padding: 20px 28px 40px;
+    }
+    nav {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      border-bottom: 1px solid var(--line);
+      margin: 14px 0 24px;
+    }
+    button,
+    select,
+    input {
+      font: inherit;
+      border: 1px solid #bccbd4;
+      border-radius: 5px;
+      padding: 8px 12px;
+      background: white;
+      color: var(--ink);
+    }
+    button {
+      cursor: pointer;
+    }
+    button:hover {
+      background: #edf4f7;
+    }
+    button:disabled {
+      cursor: wait;
+      opacity: 0.6;
+    }
+    button.primary {
+      background: var(--blue);
+      color: white;
+      border-color: var(--blue);
+    }
+    nav button {
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      padding: 12px 16px;
+      border-bottom: 3px solid transparent;
+    }
+    nav button.active {
+      border-bottom-color: var(--blue);
+      font-weight: 650;
+    }
+    section[hidden] {
+      display: none;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+      padding: 6px 0 22px;
+    }
+    .stat {
+      border-left: 3px solid #a7c6d7;
+      padding-left: 15px;
+    }
+    .stat strong {
+      display: block;
+      font-size: 28px;
+      line-height: 1.4;
+    }
+    .stat small {
+      font-size: 13px;
+    }
+    .block {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 22px;
+      margin-bottom: 20px;
+    }
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .row label {
+      display: flex;
+      gap: 7px;
+      align-items: center;
+    }
+    .two {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .chart {
+      width: 100%;
+      height: 310px;
+      position: relative;
+    }
+    .chart svg {
+      width: 100%;
+      height: 100%;
+    }
+    .tip {
+      position: absolute;
+      pointer-events: none;
+      background: #fff;
+      border: 1px solid #b4c8d4;
+      padding: 6px 10px;
+      font-size: 12px;
+      box-shadow: 0 2px 8px #0001;
+      z-index: 2;
+      white-space: pre-line;
+      max-width: 220px;
+    }
+    .legend {
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+      margin: 3px 0 8px;
+      font-size: 13px;
+    }
+    .legend i {
+      display: inline-block;
+      width: 20px;
+      height: 3px;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 14px;
+      margin-top: 12px;
+    }
+    th,
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+    }
+    th {
+      background: #eef3f6;
+      font-weight: 600;
+    }
+    td.num,
+    th.num {
+      text-align: right;
+    }
+    .tablewrap {
+      overflow: auto;
+    }
+    a {
+      color: var(--blue);
+    }
+    .notice {
+      color: #7c4b12;
+    }
+    .error {
+      color: #a52727;
+    }
+    #status {
+      font-size: 13px;
+      color: var(--muted);
+      padding: 12px 0;
+    }
+    .list p {
+      border-bottom: 1px solid var(--line);
+      padding: 9px 0;
+    }
+    .footer {
+      font-size: 12px;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+      padding-top: 15px;
+    }
+    @media (max-width: 800px) {
+      header {
+        align-items: flex-start;
+      }
+      .stats {
+        grid-template-columns: 1fr 1fr;
+      }
+      .two {
+        grid-template-columns: 1fr;
+      }
+      main {
+        padding: 14px;
+      }
+      h1 {
+        font-size: 23px;
+      }
+      .block {
+        padding: 16px;
+      }
+    }
+  </style>
+  <header>
+    <div>
+      <h1>EnergyScope</h1>
+      <div class="muted">
+        Нагрузка энергосистемы Великобритании · анализ и прогноз на 24 часа
+      </div>
+    </div>
+    <button id="update" class="primary">Обновить данные</button>
+  </header>
+  <main>
+    <div id="status" role="status">Загрузка сохранённого расчёта…</div>
+    <nav aria-label="Разделы">
+      <button class="active" data-tab="overview">Обзор</button
+      ><button data-tab="forecast">Прогноз</button
+      ><button data-tab="quality">Качество данных</button
+      ><button data-tab="backtest">Бэктестирование</button
+      ><button data-tab="scenarios">Сценарии</button>
+    </nav>
+    <div id="empty" hidden class="block">
+      Расчёт ещё не готов. Нажмите «Обновить данные» и дождитесь завершения.
+    </div>
+    <section id="overview">
+      <div class="stats" id="stats"></div>
+      <div class="block">
+        <h2>Как менялась нагрузка</h2>
+        <div class="row">
+          <label>С <input type="date" id="from" /></label
+          ><label>по <input type="date" id="to" /></label
+          ><button id="period">Показать</button
+          ><a href="/download/hourly.csv">Скачать почасовые данные</a>
+        </div>
+        <div id="historyChart" class="chart"></div>
+        <small
+          >Среднесуточная нагрузка, МВт. Граница суток — UTC. Точное значение
+          появляется при наведении.</small
+        >
+      </div>
+      <div class="two">
+        <div class="block">
+          <h3>В какие часы нагрузка выше</h3>
+          <div id="hourChart" class="chart" style="height: 240px"></div>
+          <small
+            >Часы по времени Europe/London. Профиль рассчитан по всей доступной
+            истории.</small
+          >
+        </div>
+        <div class="block">
+          <h3>Как нагрузка связана с погодой</h3>
+          <p id="weatherText"></p>
+          <div id="monthChart" class="chart" style="height: 205px"></div>
+          <small
+            >Средняя нагрузка по месяцам года, МВт. Погода в Лондоне —
+            приближённый внешний индикатор.</small
+          >
+        </div>
+      </div>
+      <div class="block list">
+        <h2>Автоматические выводы</h2>
+        <div id="insights"></div>
+      </div>
+    </section>
+    <section id="forecast" hidden>
+      <div class="block">
+        <h2>Нагрузка на горизонте 24 часов</h2>
+        <div class="row">
+          <label
+            >Модель
+            <select id="model"></select></label
+          ><label
+            >Горизонт
+            <select id="horizon">
+              <option value="24">24 часа</option>
+              <option value="12">12 часов</option>
+              <option value="6">6 часов</option>
+            </select></label
+          ><a href="/download/forecast.csv">Скачать прогноз</a>
+        </div>
+        <p id="forecastNote" class="muted"></p>
+        <div id="forecastChart" class="chart"></div>
+        <small
+          >Чёрная линия — последний доступный факт; цветная — прогноз. Заливка —
+          номинальный 90% интервал. Пауза между фактом и прогнозом отражает
+          задержку получения данных.</small
+        >
+        <div id="forecastTable" class="tablewrap"></div>
+      </div>
+    </section>
+    <section id="quality" hidden>
+      <div class="block">
+        <h2>Полнота и корректность наблюдений</h2>
+        <div id="qualityTable" class="tablewrap"></div>
+        <p class="muted">
+          Неполный час нагрузки не заменяется нулём. Пропуски целевой переменной
+          исключаются из обучения; признаки заполняются медианами только
+          обучающего окна. Последние дни без погоды объясняются задержкой ERA5;
+          в прогнозе используется лаг 14 суток.
+        </p>
+        <a href="/download/anomalies.csv">Скачать отмеченные аномалии</a>
+      </div>
+      <div class="block">
+        <h2>Журнал получения данных</h2>
+        <div id="logs" class="tablewrap"></div>
+      </div>
+    </section>
+    <section id="backtest" hidden>
+      <div class="block">
+        <h2>Качество прогноза на исторических окнах</h2>
+        <p>
+          Модель выбирается по RMSE на валидации. Ширина интервала определяется
+          на отдельных калибровочных окнах. Тест используется только для
+          итоговой оценки.
+        </p>
+        <div class="row">
+          <label
+            >Часть
+            <select id="phase">
+              <option value="test">Независимый тест</option>
+              <option value="validation">Валидация</option>
+              <option value="calibration">Калибровка интервала</option>
+            </select></label
+          ><a href="/download/model_metrics.csv">Метрики CSV</a
+          ><a href="/download/backtest_predictions.csv">Все прогнозы CSV</a>
+        </div>
+        <div id="metricsTable" class="tablewrap"></div>
+        <p id="bestNote" class="muted"></p>
+      </div>
+      <div class="block">
+        <h3>Последнее тестовое окно выбранной модели</h3>
+        <div id="testChart" class="chart"></div>
+      </div>
+      <div class="two">
+        <div class="block">
+          <h3>Ошибка по горизонту</h3>
+          <div id="errorChart" class="chart" style="height: 260px"></div>
+        </div>
+        <div class="block">
+          <h3>Диагностика остатков</h3>
+          <p id="residualText"></p>
+          <div id="acfChart" class="chart" style="height: 200px"></div>
+          <small
+            >Корреляции рассчитаны по парам остатков внутри каждого суточного
+            окна; разрывы между окнами не склеиваются.</small
+          >
+        </div>
+      </div>
+    </section>
+    <section id="scenarios" hidden>
+      <div class="block">
+        <h2>Чувствительность прогноза к температурному индикатору</h2>
+        <p>
+          Сценарная модель — Ridge. Базовый индикатор температуры на каждый час
+          равен температуре 14 суток назад. Сценарий изменяет этот индикатор; он
+          показывает поведение модели и не доказывает причинное влияние погоды.
+        </p>
+        <div class="row">
+          <button class="preset" data-delta="-3">Холоднее на 3 °C</button
+          ><button class="preset" data-delta="0">Базовый</button
+          ><button class="preset" data-delta="3">Теплее на 3 °C</button
+          ><label
+            >Изменение, °C
+            <input
+              id="delta"
+              type="number"
+              min="-10"
+              max="10"
+              step="0.5"
+              value="0"
+              style="width: 90px" /></label
+          ><button class="primary" id="scenarioRun">Пересчитать</button>
+        </div>
+        <p id="rangeText" class="muted"></p>
+        <p id="scenarioMessage" role="status"></p>
+        <div id="scenarioChart" class="chart"></div>
+        <small
+          >В сценарии сохраняется ширина базового 90% интервала Ridge. Покрытие
+          для изменённых факторов отдельно не подтверждено.</small
+        >
+      </div>
+    </section>
+    <div class="footer">
+      Источники: Elexon Insights (INDO, JSON) и Open-Meteo (ERA5, CSV). Нагрузка
+      — средняя мощность, МВт; она не равна полному конечному потреблению
+      страны. Временные метки графиков и таблиц — UTC, если не указано иное.
+    </div>
+  </main>
+  <script>
+    let D = null,
+      lastVersion = null;
+    const $ = (id) => document.getElementById(id);
+    const fmt = (v, n = 0) =>
+      Number(v).toLocaleString("ru-RU", { maximumFractionDigits: n });
+    const date = (s) =>
+      new Date(s).toLocaleString("ru-RU", {
+        timeZone: "UTC",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    const esc = (s) =>
+      String(s).replace(
+        /[&<>"']/g,
+        (c) =>
+          ({
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;",
+          })[c],
+      );
+    function table(headers, rows) {
+      return (
+        "<table><thead><tr>" +
+        headers.map((h) => "<th>" + esc(h) + "</th>").join("") +
+        "</tr></thead><tbody>" +
+        rows
+          .map(
+            (row) =>
+              "<tr>" +
+              row.map((v) => "<td>" + esc(v) + "</td>").join("") +
+              "</tr>",
+          )
+          .join("") +
+        "</tbody></table>"
+      );
+    }
+    function chart(id, sets, { band = null, time = true, unit = "МВт" } = {}) {
+      const el = $(id),
+        W = 1000,
+        H = 300,
+        L = 80,
+        R = 20,
+        T = 20,
+        B = 45;
+      const points = sets
+        .flatMap((s) => s.data)
+        .filter((p) => Number.isFinite(p[1]));
+      if (!points.length) {
+        el.textContent = "Нет данных за выбранный период";
+        return;
+      }
+      const xs = points.map((p) => +p[0]),
+        ys = points.map((p) => p[1]);
+      if (band) band.forEach((p) => ys.push(p[1], p[2]));
+      const xmin = Math.min(...xs),
+        xmax = Math.max(...xs),
+        spanx = xmax - xmin || 1;
+      let ymin = Math.min(...ys),
+        ymax = Math.max(...ys),
+        pady = (ymax - ymin) * 0.12 || 1;
+      ymin -= pady;
+      ymax += pady;
+      const X = (x) => L + ((x - xmin) / spanx) * (W - L - R),
+        Y = (y) => H - B - ((y - ymin) / (ymax - ymin)) * (H - T - B);
+      let svg = "";
+      for (let i = 0; i < 5; i++) {
+        const y = ymin + ((ymax - ymin) * i) / 4;
+        svg += `<line x1="${L}" x2="${W - R}" y1="${Y(y)}" y2="${Y(y)}" stroke="#dce4e9"/><text x="${L - 12}" y="${Y(y) + 4}" text-anchor="end" font-size="12" fill="#60727e">${fmt(y)}</text>`;
+      }
+      for (let i = 0; i < 5; i++) {
+        const x = xmin + (spanx * i) / 4;
+        const text = time
+          ? new Date(x).toLocaleString("ru-RU", {
+              timeZone: "UTC",
+              day: "2-digit",
+              month: "2-digit",
+              ...(spanx < 172800000 ? { hour: "2-digit" } : {}),
+            })
+          : fmt(x);
+        svg += `<text x="${X(x)}" y="${H - 15}" text-anchor="middle" font-size="12" fill="#60727e">${esc(text)}</text>`;
+      }
+      if (band) {
+        const top = band.map((p) => `${X(+p[0])},${Y(p[2])}`),
+          bottom = [...band].reverse().map((p) => `${X(+p[0])},${Y(p[1])}`);
+        svg += `<polygon points="${top.concat(bottom).join(" ")}" fill="#d9e8ef" opacity=".75"/>`;
+      }
+      for (const s of sets) {
+        const path = s.data
+          .filter((p) => Number.isFinite(p[1]))
+          .map((p, i) => `${i ? "L" : "M"}${X(+p[0])},${Y(p[1])}`)
+          .join(" ");
+        svg += `<path d="${path}" fill="none" stroke="${s.color}" stroke-width="2.3"/>`;
+      }
+      el.innerHTML =
+        '<div class="legend">' +
+        sets
+          .map(
+            (s) =>
+              `<span><i style="background:${s.color}"></i>${esc(s.name)}</span>`,
+          )
+          .join("") +
+        `<small>${unit}</small></div><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Временной график">${svg}</svg><div class="tip" hidden></div>`;
+      const tip = el.querySelector(".tip");
+      el.onmousemove = (e) => {
+        const rect = el.querySelector("svg").getBoundingClientRect();
+        const q =
+          xmin +
+          ((((e.clientX - rect.left) / rect.width) * W - L) / (W - L - R)) *
+            spanx;
+        const vals = sets.map((s) => {
+          const near = s.data.reduce((a, b) =>
+            Math.abs(+a[0] - q) < Math.abs(+b[0] - q) ? a : b,
+          );
+          return { name: s.name, p: near };
+        });
+        tip.textContent = vals
+          .map(
+            (v) =>
+              (time ? date(v.p[0]) : fmt(v.p[0])) +
+              " · " +
+              v.name +
+              ": " +
+              fmt(v.p[1], 1),
+          )
+          .join("\n");
+        tip.hidden = false;
+        tip.style.left =
+          Math.min(
+            el.clientWidth - 225,
+            Math.max(0, e.clientX - rect.left + 10),
+          ) + "px";
+        tip.style.top = "30px";
+      };
+      el.onmouseleave = () => (tip.hidden = true);
+    }
+    function drawHistory() {
+      if (!D) return;
+      let start = $("from").value,
+        end = $("to").value;
+      const map = new Map();
+      for (const r of D.series) {
+        if (r.y == null) continue;
+        const day = r.time.slice(0, 10);
+        if (day < start || day > end) continue;
+        const a = map.get(day) || [0, 0];
+        a[0] += r.y;
+        a[1]++;
+        map.set(day, a);
+      }
+      chart("historyChart", [
+        {
+          name: "Средняя нагрузка за сутки",
+          color: "#276b8d",
+          data: [...map].map(([day, a]) => [new Date(day), a[0] / a[1]]),
+        },
+      ]);
+    }
+    function drawForecast() {
+      if (!D) return;
+      const model = $("model").value,
+        h = +$("horizon").value,
+        rows = D.forecast.filter((r) => r.model === model && r.horizon <= h);
+      const last = new Date(D.last_observation),
+        facts = D.series
+          .filter(
+            (r) => r.y != null && +new Date(r.time) > +last - 72 * 3600000,
+          )
+          .map((r) => [new Date(r.time), r.y]);
+      chart(
+        "forecastChart",
+        [
+          { name: "Факт", color: "#333333", data: facts },
+          {
+            name: D.names[model],
+            color: "#c56a2b",
+            data: rows.map((r) => [new Date(r.time), r.predicted]),
+          },
+        ],
+        { band: rows.map((r) => [new Date(r.time), r.lower, r.upper]) },
+      );
+      $("forecastNote").textContent =
+        "Начало прогноза: " +
+        date(D.forecast_origin) +
+        " UTC. Последний доступный факт: " +
+        date(D.last_observation) +
+        " UTC.";
+      $("forecastTable").innerHTML = table(
+        ["Время UTC", "Прогноз, МВт", "Нижняя граница", "Верхняя граница"],
+        rows.map((r) => [
+          date(r.time),
+          fmt(r.predicted),
+          fmt(r.lower),
+          fmt(r.upper),
+        ]),
+      );
+    }
+    function drawBacktest() {
+      if (!D) return;
+      const phase = $("phase").value,
+        rows = D.metrics.filter((r) => r.phase === phase);
+      $("metricsTable").innerHTML = table(
+        ["Модель", "MAE, МВт", "RMSE, МВт", "Покрытие 90%", "Часов"],
+        rows.map((r) => [
+          D.names[r.model],
+          fmt(r.MAE, 1),
+          fmt(r.RMSE, 1),
+          fmt(r.coverage * 100, 1) + "%",
+          r.n,
+        ]),
+      );
+      $("bestNote").textContent =
+        "По валидации выбрана модель " +
+        D.names[D.best_model] +
+        ". Покрытие проверяется на тесте; номинальный уровень не гарантирует фактическое покрытие.";
+      const selected = D.backtest.filter(
+          (r) => r.phase === "test" && r.model === D.best_model,
+        ),
+        last = selected
+          .map((r) => r.origin)
+          .sort()
+          .at(-1),
+        p = selected.filter((r) => r.origin === last);
+      chart(
+        "testChart",
+        [
+          {
+            name: "Факт",
+            color: "#333333",
+            data: p.map((r) => [new Date(r.time), r.actual]),
+          },
+          {
+            name: "Прогноз",
+            color: "#c56a2b",
+            data: p.map((r) => [new Date(r.time), r.predicted]),
+          },
+        ],
+        { band: p.map((r) => [new Date(r.time), r.lower, r.upper]) },
+      );
+      const colors = ["#276b8d", "#c56a2b", "#7b6e9c"];
+      chart(
+        "errorChart",
+        Object.keys(D.names).map((m, i) => ({
+          name: D.names[m],
+          color: colors[i],
+          data: Array.from({ length: 24 }, (_, j) => {
+            const a = D.backtest.filter(
+              (r) => r.phase === "test" && r.model === m && r.horizon === j + 1,
+            );
+            return [
+              j + 1,
+              Math.sqrt(
+                a.reduce((s, r) => s + r.error * r.error, 0) / a.length,
+              ),
+            ];
+          }),
+        })),
+        { time: false },
+      );
+      $("residualText").textContent =
+        "Среднее остатка (факт − прогноз): " +
+        fmt(D.diagnostics.mean_error_mw, 1) +
+        " МВт. Стандартное отклонение: " +
+        fmt(D.diagnostics.std_error_mw, 1) +
+        " МВт. Ненулевая корреляция указывает на сохраняющуюся структуру ошибок.";
+      chart(
+        "acfChart",
+        [
+          {
+            name: "Корреляция остатков",
+            color: "#276b8d",
+            data: D.diagnostics.acf_within_window.map((r) => [
+              r.lag,
+              r.correlation,
+            ]),
+          },
+        ],
+        { time: false, unit: "r" },
+      );
+    }
+    async function runScenario() {
+      if (!D) return;
+      const value = +$("delta").value;
+      $("scenarioMessage").textContent = "Пересчёт…";
+      try {
+        const r = await fetch("/api/scenario", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ delta: value }),
+          }),
+          s = await r.json();
+        if (!r.ok) throw Error(s.error);
+        const base = D.forecast.filter((r) => r.model === "ridge"),
+          a = s.rows;
+        chart(
+          "scenarioChart",
+          [
+            {
+              name: "Базовый Ridge",
+              color: "#276b8d",
+              data: base.map((r) => [new Date(r.time), r.predicted]),
+            },
+            {
+              name: "Сценарий " + (value >= 0 ? "+" : "") + value + " °C",
+              color: "#c56a2b",
+              data: a.map((r) => [new Date(r.time), r.predicted]),
+            },
+          ],
+          { band: a.map((r) => [new Date(r.time), r.lower, r.upper]) },
+        );
+        const difference =
+          a.reduce((s, r) => s + r.predicted, 0) / a.length -
+          base.reduce((s, r) => s + r.predicted, 0) / base.length;
+        $("scenarioMessage").className = s.in_range ? "" : "notice";
+        $("scenarioMessage").textContent =
+          "Изменение средней нагрузки: " +
+          fmt(difference, 1) +
+          " МВт. " +
+          (s.in_range
+            ? "Индикатор остаётся в диапазоне обучающих данных."
+            : "Индикатор выходит за диапазон обучающих данных; сценарий является экстраполяцией.");
+      } catch (e) {
+        $("scenarioMessage").className = "error";
+        $("scenarioMessage").textContent = e.message;
+      }
+    }
+    async function loadLogs() {
+      const rows = await (await fetch("/api/logs")).json();
+      $("logs").innerHTML = table(
+        ["Время UTC", "Источник", "Статус", "Размер, байт"],
+        rows
+          .slice(-12)
+          .reverse()
+          .map((r) => [date(r.time_utc), r.source, r.status, r.bytes || "—"]),
+      );
+    }
+    async function load() {
+      try {
+        const response = await fetch("/api/data");
+        if (!response.ok) {
+          $("empty").hidden = false;
+          return;
+        }
+        D = await response.json();
+        $("empty").hidden = true;
+        const test = D.metrics.find(
+          (r) => r.phase === "test" && r.model === D.best_model,
+        );
+        const y = D.series.filter((r) => r.y != null).at(-1).y;
+        const forecast = D.forecast.filter((r) => r.model === D.best_model);
+        $("stats").innerHTML = [
+          [
+            "Последняя нагрузка",
+            fmt(y) + " МВт",
+            date(D.last_observation) + " UTC",
+          ],
+          [
+            "Максимум прогноза",
+            fmt(Math.max(...forecast.map((r) => r.predicted))) + " МВт",
+            D.names[D.best_model],
+          ],
+          [
+            "RMSE на тесте",
+            fmt(test.RMSE) + " МВт",
+            "8 независимых окон по 24 часа",
+          ],
+          [
+            "Полнота нагрузки",
+            fmt(D.quality.completeness_percent, 2) + "%",
+            "Доля полных почасовых измерений",
+          ],
+        ]
+          .map(
+            (a) =>
+              `<div class="stat"><small>${esc(a[0])}</small><strong>${esc(a[1])}</strong><small>${esc(a[2])}</small></div>`,
+          )
+          .join("");
+        if (!$("from").value) {
+          const last = new Date(D.last_observation);
+          $("to").value = last.toISOString().slice(0, 10);
+          $("from").value = new Date(+last - 90 * 86400000)
+            .toISOString()
+            .slice(0, 10);
+        }
+        $("model").innerHTML = Object.entries(D.names)
+          .map(([k, v]) => `<option value="${k}">${esc(v)}</option>`)
+          .join("");
+        $("model").value = D.best_model;
+        $("weatherText").textContent =
+          "Корреляция нагрузки с температурой: " +
+          fmt(D.stats.correlations.temperature, 2) +
+          ". Связь включает сезонность и другие факторы; причинный эффект не оценивался.";
+        $("insights").innerHTML = D.insights
+          .map((t) => "<p>" + esc(t) + "</p>")
+          .join("");
+        const q = D.quality;
+        $("qualityTable").innerHTML = table(
+          ["Проверка", "Результат"],
+          [
+            ["Сырые получасовые записи", fmt(q.raw_energy_rows)],
+            ["Период", date(q.first_time) + " — " + date(q.last_time)],
+            ["Полные / все часы", fmt(q.valid_hours) + " / " + fmt(q.hours)],
+            ["Пропущенные часы нагрузки", q.missing_hours],
+            ["Дубли исходных временных меток", q.duplicate_energy_rows],
+            ["Недопустимые значения нагрузки", q.invalid_energy_rows],
+            ["Пропуски температуры", q.weather_missing_hours.temperature],
+            ["Последняя погода UTC", date(q.weather_last_time)],
+            ["Отмеченные аномалии", D.stats.anomaly_hours],
+          ],
+        );
+        $("rangeText").textContent =
+          "Диапазон применимости температурного индикатора: " +
+          fmt(D.scenario_range[0], 1) +
+          "…" +
+          fmt(D.scenario_range[1], 1) +
+          " °C. Фиксированные сценарии: −3, 0, +3 °C.";
+        drawHistory();
+        chart(
+          "hourChart",
+          [
+            {
+              name: "Средняя нагрузка",
+              color: "#276b8d",
+              data: Object.entries(D.stats.hour_profile).map(([k, v]) => [
+                +k,
+                v,
+              ]),
+            },
+          ],
+          { time: false },
+        );
+        chart(
+          "monthChart",
+          [
+            {
+              name: "Средняя нагрузка",
+              color: "#276b8d",
+              data: Object.entries(D.stats.month_profile).map(([k, v]) => [
+                +k,
+                v,
+              ]),
+            },
+          ],
+          { time: false },
+        );
+        drawForecast();
+        drawBacktest();
+        await loadLogs();
+        await runScenario();
+      } catch (e) {
+        $("status").textContent = "Ошибка загрузки: " + e.message;
+      }
+    }
+    document.querySelectorAll("nav button").forEach(
+      (b) =>
+        (b.onclick = () => {
+          document
+            .querySelectorAll("section")
+            .forEach((s) => (s.hidden = s.id !== b.dataset.tab));
+          document
+            .querySelectorAll("nav button")
+            .forEach((x) => x.classList.toggle("active", x === b));
+        }),
+    );
+    $("period").onclick = drawHistory;
+    $("model").onchange = drawForecast;
+    $("horizon").onchange = drawForecast;
+    $("phase").onchange = drawBacktest;
+    $("scenarioRun").onclick = runScenario;
+    document.querySelectorAll(".preset").forEach(
+      (b) =>
+        (b.onclick = () => {
+          $("delta").value = b.dataset.delta;
+          runScenario();
+        }),
+    );
+    $("update").onclick = async () => {
+      await fetch("/api/update", { method: "POST" });
+      await status();
+    };
+    async function status() {
+      try {
+        const s = await (await fetch("/api/status")).json();
+        $("update").disabled = s.running;
+        $("status").className = s.error ? "error" : "";
+        $("status").textContent = s.error
+          ? s.error
+          : s.running
+            ? s.message
+            : D
+              ? "Расчёт сохранён " +
+                date(D.snapshot_utc) +
+                " UTC. Последний факт: " +
+                date(D.last_observation) +
+                " UTC."
+              : s.message;
+        if (s.version !== lastVersion) {
+          lastVersion = s.version;
+          await load();
+        }
+      } catch (e) {
+        $("status").textContent =
+          "Нет связи с локальной программой. Проверь, что main.py запущен.";
+      }
+    }
+    status();
+    setInterval(status, 3000);
+  </script>
+</html>
