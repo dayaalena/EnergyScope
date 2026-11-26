@@ -53,9 +53,19 @@ def serve(root, config, port=None, offline=False, open_browser=True):
             path = urllib.parse.urlsplit(self.path).path
             if path in ['/', '/index.html']:
                 self.send((root/'web/index.html').read_bytes(), mime='text/html; charset=utf-8')
+            elif path.startswith('/assets/'):
+                assets = (root/'web/assets').resolve()
+                file = (assets/urllib.parse.unquote(path[len('/assets/'):])).resolve()
+                types = {'.css':'text/css; charset=utf-8', '.js':'text/javascript; charset=utf-8',
+                         '.woff':'font/woff', '.svg':'image/svg+xml'}
+                if file.is_relative_to(assets) and file.is_file() and file.suffix in types:
+                    self.send(file.read_bytes(), mime=types[file.suffix])
+                else:
+                    self.send('{"error":"Файл не найден"}',404)
             elif path == '/api/status':
                 p = root/'results/current.json'
-                self.send(json.dumps({**state, 'version': p.stat().st_mtime if p.exists() else None}, ensure_ascii=False))
+                self.send(json.dumps({**state, 'offline': offline,
+                                      'version': p.stat().st_mtime if p.exists() else None}, ensure_ascii=False))
             elif path == '/api/data':
                 file = root/'results/current.json'
                 if file.exists():

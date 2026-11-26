@@ -45,7 +45,10 @@ def run(root, config, offline=False, progress=lambda msg: print(msg, flush=True)
     insights = analysis.conclusions(frame, forecast, stats, quality, best, summary)
     warm_mean = scenario.loc[scenario.delta.eq(3), 'predicted'].mean()
     base_mean = scenario.loc[scenario.delta.eq(0), 'predicted'].mean()
-    insights.append(f'В сценарии +3 °C средний прогноз Ridge изменяется на {warm_mean-base_mean:+.1f} МВт при фиксированных остальных признаках. Это чувствительность модели к индикатору, а не причинный эффект.')
+    scenario_change = warm_mean - base_mean
+    scenario_word = 'выше' if scenario_change > 0 else 'ниже' if scenario_change < 0 else 'равен'
+    insights.append(f'В сценарии +3 °C средний прогноз Ridge {scenario_word} базового на {abs(scenario_change):.1f} МВт.'
+                    if scenario_change else 'В сценарии +3 °C средний прогноз Ridge равен базовому.')
     csv_write(root/'results/backtest_predictions.csv', pred)
     csv_write(root/'results/fold_metrics.csv', folds)
     csv_write(root/'results/model_metrics.csv', pd.DataFrame(summary))
